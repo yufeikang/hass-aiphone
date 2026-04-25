@@ -1,0 +1,18 @@
+{
+    "name": "Aiphone WP-2MED Intercom",
+    "description": "Native Home Assistant integration for Aiphone WP-2MED video intercoms (single-family / 戸建 model). Doorbell events, live snapshots, on-demand monitor, recording, answer, electric strike unlock — direct AWS IoT MQTT, no cloud relay.",
+    "render_readme": true,
+    "domains": [
+        "binary_sensor",
+        "button",
+        "camera",
+        "lock",
+        "sensor"
+    ],
+    "iot_class": [
+        "Cloud Push"
+    ],
+    "country": [
+        "JP"
+    ]
+}

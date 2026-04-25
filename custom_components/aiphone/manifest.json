@@ -1,0 +1,11 @@
+{
+  "domain": "aiphone",
+  "name": "Aiphone (WP-2MED, VKZ-R)",
+  "version": "0.1.0",
+  "documentation": "https://github.com/yourname/hass-aiphone",
+  "codeowners": ["@you"],
+  "config_flow": true,
+  "iot_class": "cloud_push",
+  "requirements": ["paho-mqtt>=1.6.1", "aiortc>=1.14.0", "av>=10.0.0"],
+  "integration_type": "device"
+}

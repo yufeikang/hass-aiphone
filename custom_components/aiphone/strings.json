@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Aiphone (WP-2MED) — pair a new client",
+        "description": "1. On the WP-2MED main unit, navigate to 設定 → 各種設定 → アプリ連携 → 端末追加 (or similar 'add device' menu).\n2. Wait until the screen shows the 'waiting for app' prompt.\n3. Click Submit below — pairing should complete in 5–10 seconds.\n\nIf this Pi is not on the same LAN as your WP-2MED, this won't work — the pairing protocol uses LAN UDP broadcast and TLS.",
+        "data": {
+          "termname": "Display name (shown in the unit's call list)"
+        }
+      },
+      "failed": {
+        "title": "Pairing failed",
+        "description": "Try again? Make sure the WP-2MED is in 端末追加 mode and on the same LAN as Home Assistant."
+      }
+    },
+    "progress": {
+      "pairing": "Pairing with WP-2MED — discovering on LAN, exchanging OTP, provisioning AWS IoT cert, registering display name…"
+    },
+    "error": {
+      "wp_not_in_pairing_mode": "WP-2MED did not respond. Make sure the unit is in 端末追加 mode and on the same LAN as Home Assistant.",
+      "tls_failed": "Could not establish TLS to the unit. The unit may have already left pairing mode.",
+      "otp_verify_failed": "OTP verification failed. The unit closed pairing — please retry.",
+      "cloud_failed": "Cloud registration failed. Check Home Assistant's logs for details.",
+      "termname_failed": "Display-name registration failed. Cert is provisioned but unit may not list this client.",
+      "unknown": "Unknown error during pairing. Check Home Assistant's logs."
+    },
+    "abort": {
+      "already_configured": "This Aiphone unit + client is already configured."
+    }
+  }
+}

@@ -1,0 +1,43 @@
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+coverage.xml
+.DS_Store
+.env
+
+# uv / virtual envs
+.venv/
+.uv/
+venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Test / coverage
+htmlcov/
+.tox/
+.nox/
+.coverage.*
+*.cover
+.hypothesis/
+
+# Logs
+*.log
+logs/
+
+# Local credentials / runtime artifacts (never commit)
+*.pem
+*.key
+secrets/
+.aiphone-poc/

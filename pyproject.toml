@@ -1,0 +1,33 @@
+[project]
+name = "hass-aiphone"
+version = "0.1.0"
+description = "Home Assistant integration for Aiphone WP-2MED video intercoms"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Yufei Kang" }]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.black]
+line-length = 88
+target-version = ["py311", "py312"]
+
+[tool.pylint]
+disable = ["import-error", "no-name-in-module"]
+ignored-modules = [
+    "homeassistant.core",
+    "homeassistant.helpers.update_coordinator",
+    "homeassistant.config_entries",
+    "homeassistant.helpers.dispatcher",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-asyncio>=0.21.0",
+    "pytest-homeassistant-custom-component>=0.13.46",
+    "black>=23.0.0",
+    "pylint>=2.17.0",
+]
