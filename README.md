@@ -91,7 +91,7 @@ The integration auto-installs `aiortc>=1.14.0` and `av>=10.0.0` on first load. O
 ```bash
 # In your HA config directory
 cd config/custom_components
-git clone https://github.com/<owner>/hass-aiphone.git aiphone-tmp
+git clone https://github.com/yufeikang/hass-aiphone.git aiphone-tmp
 mv aiphone-tmp/custom_components/aiphone .
 rm -rf aiphone-tmp
 ```
@@ -143,7 +143,7 @@ If pairing fails, make sure:
 ## Development
 
 ```bash
-git clone https://github.com/<owner>/hass-aiphone.git
+git clone https://github.com/yufeikang/hass-aiphone.git
 cd hass-aiphone
 uv venv
 uv pip install -e ".[dev]"
