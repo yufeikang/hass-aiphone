@@ -53,26 +53,27 @@ class AiphoneLastSnapshot(ImageEntity):
         )
         self._cached_path: Path | None = None
         self._cached_jpeg: bytes | None = None
-        # Initialize from existing latest recording so the entity is non-empty
-        # even on first start-up before any new ring fires.
-        self._refresh_image_last_updated()
 
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
         self.async_on_remove(
             async_dispatcher_connect(self.hass, SIGNAL_CAMERA_REFRESH, self._on_refresh)
         )
+        # Seed image_last_updated from the existing latest recording (off the
+        # event loop because it does a synchronous glob/stat).
+        await self.hass.async_add_executor_job(self._refresh_image_last_updated_sync)
+        self.async_write_ha_state()
 
     @callback
     def _on_refresh(self) -> None:
-        # New recording was finalized — invalidate cache, bump timestamp so HA
-        # frontend re-fetches the image.
+        # New recording was finalized — invalidate cache. The fs scan to update
+        # image_last_updated runs off-loop.
         self._cached_path = None
         self._cached_jpeg = None
-        self._refresh_image_last_updated()
+        self.hass.async_add_executor_job(self._refresh_image_last_updated_sync)
         self.async_write_ha_state()
 
-    def _refresh_image_last_updated(self) -> None:
+    def _refresh_image_last_updated_sync(self) -> None:
         latest = self._coord.video.latest_recording
         if latest:
             try:

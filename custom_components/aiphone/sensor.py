@@ -88,6 +88,11 @@ class AiphoneLastRecording(SensorEntity):
     attr.file_name  = basename
     attr.size_bytes = file size
     attr.kind       = "ring" (passive, doorbell press) or "monitor" (active)
+
+    Filesystem state is read off the event loop on first add and on every
+    SIGNAL_CAMERA_REFRESH (= recording finalized); native_value /
+    extra_state_attributes only return the cached values, so HA's frequent
+    polling never hits the disk.
     """
     _attr_has_entity_name = True
     _attr_should_poll = False
@@ -105,39 +110,46 @@ class AiphoneLastRecording(SensorEntity):
             manufacturer="Aiphone",
             model="WP-2MED",
         )
+        self._cached_state: datetime | None = None
+        self._cached_attrs: dict | None = None
 
     async def async_added_to_hass(self) -> None:
         self.async_on_remove(
             async_dispatcher_connect(self.hass, SIGNAL_CAMERA_REFRESH, self._on_update)
         )
+        # Seed cache from current filesystem state, off the event loop
+        await self.hass.async_add_executor_job(self._refresh_cache_sync)
+        self.async_write_ha_state()
 
     @callback
     def _on_update(self) -> None:
+        # New recording finalized; rescan off-loop, then notify HA
+        self.hass.async_add_executor_job(self._refresh_cache_sync)
         self.async_write_ha_state()
 
-    @property
-    def native_value(self) -> datetime | None:
+    def _refresh_cache_sync(self) -> None:
+        """Runs in executor — safe to do blocking glob/stat."""
         latest = self._coord.video.latest_recording
         if latest is None:
-            return None
-        try:
-            return datetime.fromtimestamp(latest.stat().st_mtime, tz=timezone.utc)
-        except OSError:
-            return None
-
-    @property
-    def extra_state_attributes(self) -> dict | None:
-        latest = self._coord.video.latest_recording
-        if latest is None:
-            return None
+            self._cached_state = None
+            self._cached_attrs = None
+            return
         try:
             stat = latest.stat()
         except OSError:
-            return None
-        kind = "monitor" if latest.name.startswith("monitor-") else "ring"
-        return {
+            return
+        self._cached_state = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
+        self._cached_attrs = {
             "file_path": str(latest),
             "file_name": latest.name,
             "size_bytes": stat.st_size,
-            "kind": kind,
+            "kind": "monitor" if latest.name.startswith("monitor-") else "ring",
         }
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self._cached_state
+
+    @property
+    def extra_state_attributes(self) -> dict | None:
+        return self._cached_attrs

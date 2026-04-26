@@ -124,6 +124,40 @@ async def _log_inbound_stats(pc: RTCPeerConnection, tag: str) -> None:
             )
 
 
+async def _periodic_stats_logger(
+    pc: RTCPeerConnection,
+    tag: str,
+    period_s: float = 3.0,
+    duration_s: float = 60.0,
+) -> None:
+    """[Phase 1 diagnostic] Log RTP stats every N sec for the call duration so we
+    can see exactly *when* audio packets first start flowing — critical for
+    validating the 24000 → cloud-opens-audio hypothesis."""
+    try:
+        end = time.time() + duration_s
+        while time.time() < end:
+            await asyncio.sleep(period_s)
+            try:
+                report = await pc.getStats()
+            except Exception:
+                continue
+            for stat in report.values():
+                if getattr(stat, "type", "") == "inbound-rtp":
+                    pkts = getattr(stat, "packetsReceived", 0) or 0
+                    if pkts > 0:
+                        _LOGGER.info(
+                            "📊 %s [+%.0fs] inbound-rtp kind=%s codec=%s pkts=%s bytes=%s",
+                            tag,
+                            period_s,
+                            getattr(stat, "kind", "?"),
+                            getattr(stat, "codec", getattr(stat, "mimeType", "?")),
+                            pkts,
+                            getattr(stat, "bytesReceived", "?"),
+                        )
+    except asyncio.CancelledError:
+        return
+
+
 class VideoCapture:
     """Owns active capture state. Single instance per coordinator."""
 
@@ -218,6 +252,7 @@ class VideoCapture:
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
         self._passive_path = self.recordings_dir / f"{ts}-{_filename_safe(dsp1 or 'ring')}.mp4"
         self._passive_cid = cid
+        passive_t0 = time.time()  # [Phase 1] timeline anchor for audio diagnostics
         _LOGGER.info("🎥 passive capture cid=%s dsp1=%s -> %s", cid[-30:], dsp1, self._passive_path)
 
         pc = RTCPeerConnection(RTCConfiguration(iceServers=[]))
@@ -226,7 +261,30 @@ class VideoCapture:
         rec = MediaRecorder(str(self._passive_path))
         @pc.on("track")
         def _on_track(track):
-            _LOGGER.info("🎥 passive track: %s", track.kind)
+            elapsed = time.time() - passive_t0
+            # [Phase 1] richer diagnostic on track arrival — kind, id, mimeType
+            # via the receiver, transceiver direction. The MIME hints whether
+            # the cloud actually offered the codec (PCMU for audio, H264 video).
+            mime = "?"
+            try:
+                for r in pc.getReceivers():
+                    if r.track is track:
+                        params = r.getParameters()
+                        codecs = getattr(params, "codecs", []) or []
+                        if codecs:
+                            mime = codecs[0].mimeType
+                        break
+            except Exception:
+                pass
+            _LOGGER.info(
+                "🎥 passive track [+%.2fs] kind=%s id=%s mime=%s",
+                elapsed, track.kind, getattr(track, "id", "?"), mime,
+            )
+            if track.kind == "audio":
+                # Distinguish: track event fired but RTP may not flow until
+                # cloud opens audio path (after 24000). Watch for periodic
+                # stats below to confirm packets actually arrive.
+                _LOGGER.info("🎤 AUDIO TRACK ATTACHED — recorder will receive frames if RTP flows")
             if track.kind == "video":
                 rec.addTrack(_PassthroughVideoTrack(track, self))
             else:
@@ -284,12 +342,20 @@ class VideoCapture:
         _LOGGER.info("🎬 passive recorder started — will stop %ss after 24002",
                      PASSIVE_HOLD_AFTER_END_S)
 
+        # [Phase 1] periodic RTP stats so we can see when audio actually starts
+        # flowing relative to the 24000 send. The task is killed at teardown.
+        stats_task = asyncio.create_task(
+            _periodic_stats_logger(pc, "passive", period_s=3.0, duration_s=120.0)
+        )
+
         # Hold; coordinator's 24002 handler will call stop()
         try:
             # Cap at RING_TIMEOUT_S * 2 in case 24002 never arrives
             await asyncio.sleep(120)
         except asyncio.CancelledError:
             pass
+        finally:
+            stats_task.cancel()
 
     async def passive_finalize(self, delay_s: int = PASSIVE_HOLD_AFTER_END_S) -> None:
         """Called from coordinator on 24002 — wait briefly then stop."""
