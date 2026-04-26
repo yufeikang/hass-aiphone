@@ -61,16 +61,19 @@ class AiphoneLastSnapshot(ImageEntity):
         )
         # Seed image_last_updated from the existing latest recording (off the
         # event loop because it does a synchronous glob/stat).
-        await self.hass.async_add_executor_job(self._refresh_image_last_updated_sync)
-        self.async_write_ha_state()
+        await self._async_refresh_and_write()
 
     @callback
     def _on_refresh(self) -> None:
-        # New recording was finalized — invalidate cache. The fs scan to update
-        # image_last_updated runs off-loop.
+        # SIGNAL_CAMERA_REFRESH = recording finalized. Invalidate cache, refresh
+        # image_last_updated (off-loop), then notify HA. Don't fire-and-forget
+        # the executor job — must wait so write_ha_state sees the new mtime.
         self._cached_path = None
         self._cached_jpeg = None
-        self.hass.async_add_executor_job(self._refresh_image_last_updated_sync)
+        self.hass.async_create_task(self._async_refresh_and_write())
+
+    async def _async_refresh_and_write(self) -> None:
+        await self.hass.async_add_executor_job(self._refresh_image_last_updated_sync)
         self.async_write_ha_state()
 
     def _refresh_image_last_updated_sync(self) -> None:

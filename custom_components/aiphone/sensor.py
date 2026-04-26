@@ -118,13 +118,17 @@ class AiphoneLastRecording(SensorEntity):
             async_dispatcher_connect(self.hass, SIGNAL_CAMERA_REFRESH, self._on_update)
         )
         # Seed cache from current filesystem state, off the event loop
-        await self.hass.async_add_executor_job(self._refresh_cache_sync)
-        self.async_write_ha_state()
+        await self._async_refresh_and_write()
 
     @callback
     def _on_update(self) -> None:
-        # New recording finalized; rescan off-loop, then notify HA
-        self.hass.async_add_executor_job(self._refresh_cache_sync)
+        # SIGNAL_CAMERA_REFRESH fires after a recording finalized. Refresh the
+        # cache (off-loop) THEN write_ha_state — the previous race wrote stale
+        # values because async_add_executor_job is fire-and-forget.
+        self.hass.async_create_task(self._async_refresh_and_write())
+
+    async def _async_refresh_and_write(self) -> None:
+        await self.hass.async_add_executor_job(self._refresh_cache_sync)
         self.async_write_ha_state()
 
     def _refresh_cache_sync(self) -> None:

@@ -1,6 +1,7 @@
 """Camera: snapshot from the latest captured mp4 (passive ring or monitor)."""
 from __future__ import annotations
 
+import asyncio
 import io
 import logging
 from pathlib import Path
@@ -14,6 +15,14 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from .const import DOMAIN, SIGNAL_CAMERA_REFRESH
 from .coordinator import AiphoneCoordinator
+
+# When a passive capture is in progress but no live frame has been decoded
+# yet, wait briefly polling for one. Empirically: track event arrives ~0.2s,
+# DTLS + first H.264 keyframe decoded usually 1-3s. We poll up to this
+# limit so an automation that fetches the snapshot right after a ring gets
+# the *current* visitor rather than a cached frame from the previous call.
+LIVE_FRAME_WAIT_TIMEOUT_S = 4.5
+LIVE_FRAME_POLL_INTERVAL_S = 0.15
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -68,6 +77,19 @@ class AiphoneEntranceCamera(Camera):
         live = await self._coord.video.async_live_jpeg()
         if live is not None:
             return live
+        # If a passive capture is in progress, the first decoded frame may not
+        # have arrived yet (DTLS + first keyframe takes 1-3s). Wait briefly
+        # so that an automation reading entity_picture right after a ring
+        # returns the CURRENT visitor instead of a stale mp4 cache hit.
+        video = self._coord.video
+        if getattr(video, "_passive_pc", None) is not None:
+            deadline = asyncio.get_event_loop().time() + LIVE_FRAME_WAIT_TIMEOUT_S
+            while asyncio.get_event_loop().time() < deadline:
+                await asyncio.sleep(LIVE_FRAME_POLL_INTERVAL_S)
+                live = await video.async_live_jpeg()
+                if live is not None:
+                    _LOGGER.debug("async_camera_image: got live frame after wait")
+                    return live
         rec_dir = self._coord.video.recordings_dir
         result = await self.hass.async_add_executor_job(
             _pick_and_extract, rec_dir, self._cached_path
