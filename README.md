@@ -2,6 +2,10 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
 
+English | [日本語](README.ja.md)
+
+> ⚠️ **Unofficial, independent project — not affiliated with Aiphone Co., Ltd.** Use at your own risk. By installing or using this software you accept the [DISCLAIMER](DISCLAIMER.md) in full.
+
 Native Home Assistant integration for **Aiphone WP-2MED** video intercoms (single-family / 戸建 model, sold in Japan as part of the [VIXUS / VKZ-R](https://www.aiphone.co.jp/products/business/vkz/) series).
 
 This integration talks directly to the unit's AWS IoT cloud over mTLS — the same channel the official iOS/Android app uses — and exposes doorbell events, live snapshots, on-demand monitor, recording, answer, and electric strike unlock as native HA entities. **No cloud relay, no scraping, no polling**: the integration receives push events from AWS IoT MQTT in real time.
@@ -173,16 +177,26 @@ custom_components/aiphone/
 └── lock.py                # 26021 unlock
 ```
 
-For protocol details (the wire format, MID table, gotchas, and a real-call MQTT trace) see the companion [aiphone-re](../aiphone-re/) repo's `RE_NOTES.md`.
+Protocol-level questions (wire format, MID table, edge cases) are best raised on the issue tracker.
 
 ---
 
 ## Acknowledgements
 
-This project was built from scratch via static analysis of the official Android APK + LAN/TLS protocol RE — there is no public Aiphone SDK.
+This project was built from scratch via static analysis of the publicly distributed Android application and observation of the author's own network traffic on the author's own equipment. No proprietary documentation, internal source code, or non-public cryptographic material was used. There is no public Aiphone SDK.
+
+---
+
+## Disclaimer
+
+This is an **independent, unofficial** community project. It is **not affiliated with, endorsed by, or sponsored by Aiphone Co., Ltd.** "Aiphone", "WP-2MED", "VKZ-R", and "VIXUS" are trademarks of Aiphone Co., Ltd.
+
+Use of this integration **may violate** the manufacturer's Terms of Service. The user assumes all risk. Read the full [DISCLAIMER](DISCLAIMER.md) before installing.
+
+For takedown requests from rights-holders, please open an issue or contact the maintainer.
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). Use of the code is subject to the additional non-warranty and use-at-your-own-risk terms set out in [DISCLAIMER](DISCLAIMER.md).
