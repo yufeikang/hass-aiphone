@@ -7,6 +7,13 @@
   "integration_type": "device",
   "iot_class": "cloud_push",
   "issue_tracker": "https://github.com/yufeikang/hass-aiphone/issues",
-  "requirements": ["paho-mqtt>=1.6.1", "aiortc>=1.14.0", "av>=10.0.0"],
+  "requirements": [
+    "paho-mqtt>=1.6.1",
+    "av>=10.0.0",
+    "aioice>=0.10.1,<1.0.0",
+    "pylibsrtp>=0.10.0",
+    "pyee>=13.0.0",
+    "google-crc32c>=1.1"
+  ],
   "version": "0.1.0"
 }

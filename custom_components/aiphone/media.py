@@ -24,6 +24,12 @@ from typing import Any, TYPE_CHECKING
 
 import io
 
+# aiortc pins av<17 but HA pins av==17.0.1; install it --no-deps before importing
+# (runtime-compatible). See _deps.py for the full rationale.
+from ._deps import ensure_runtime_deps
+
+ensure_runtime_deps()
+
 from aiortc import RTCConfiguration, RTCPeerConnection, RTCSessionDescription
 from aiortc.contrib.media import MediaRecorder
 from aiortc.mediastreams import MediaStreamTrack
